@@ -12,6 +12,7 @@ import Register from "./pages/Register";
 import Home from "./pages/Home";
 import VideoDetail from "./pages/VideoDetail";
 import UploadVideo from "./pages/UploadVideo";
+import ChannelProfile from "./pages/ChannelProfile";
 
 // We create an inner component so we can use `useDispatch` (which requires the Redux Provider to exist)
 function AppContent() {
@@ -52,6 +53,7 @@ function AppContent() {
           <Route index element={<Home />} />
           <Route path="/video/:videoId" element={<VideoDetail />} />
           <Route path="/upload" element={<UploadVideo />} />
+          <Route path="/c/:username" element={<ChannelProfile />} />
         </Route>
         
         <Route path="/login" element={<Login />} />
