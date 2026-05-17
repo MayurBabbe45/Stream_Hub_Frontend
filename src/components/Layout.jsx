@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Outlet, Link, useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { logout } from "../store/authSlice"; // Adjust path if needed
+import toast from "react-hot-toast";
 import {
   FiHome,
   FiVideo,
@@ -9,17 +11,20 @@ import {
   FiSearch,
   FiMenu,
   FiUploadCloud,
+  FiLogOut
 } from "react-icons/fi";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 const Layout = () => {
-  // Grab the user data directly from our Redux store!
   const authStatus = useSelector((state) => state.auth.status);
   const userData = useSelector((state) => state.auth.userData);
-
-  // Search functionality hooks
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  // Search state
   const [searchQuery, setSearchQuery] = useState("");
+  // 🚨 NEW: Modal state to track if the logout confirmation is open
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -28,8 +33,23 @@ const Layout = () => {
     }
   };
 
+  // 🚨 UPDATED: The actual logout logic (only runs if confirmed)
+  const confirmLogout = async () => {
+    try {
+      // (Optional) Add your backend API call here if you need to clear a server cookie
+      // await axiosInstance.post("/users/logout"); 
+      
+      dispatch(logout());
+      setShowLogoutModal(false); // Close the modal
+      navigate("/login");
+      toast.success("Logged out successfully");
+    } catch (error) {
+      toast.error("Failed to logout");
+    }
+  };
+
   return (
-    <div className="h-screen flex flex-col bg-[#0f0f0f] text-white overflow-hidden">
+    <div className="h-screen flex flex-col bg-[#0f0f0f] text-white overflow-hidden relative">
       <nav className="h-16 w-full flex items-center justify-between px-4 border-b border-zinc-800 bg-[#0f0f0f] z-50">
         <div className="flex items-center gap-4 text-xl font-bold tracking-tighter">
           <button className="p-2 hover:bg-zinc-800 rounded-full transition-colors md:hidden">
@@ -43,7 +63,7 @@ const Layout = () => {
           </Link>
         </div>
 
-        {/* --- UPDATED SEARCH FORM --- */}
+        {/* SEARCH FORM */}
         <div className="hidden sm:flex flex-1 max-w-xl items-center mx-4">
           <form 
             onSubmit={handleSearch}
@@ -65,7 +85,6 @@ const Layout = () => {
         <div>
           {authStatus && userData ? (
             <div className="flex items-center gap-4">
-              {/* UPLOAD BUTTON */}
               <Link
                 to="/upload"
                 className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium rounded-full transition-colors"
@@ -73,19 +92,32 @@ const Layout = () => {
                 <FiUploadCloud /> Upload
               </Link>
 
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="flex items-center gap-3 cursor-pointer"
-              >
-                <span className="hidden md:block font-medium text-sm text-zinc-300">
-                  {userData.username}
-                </span>
-                <img
-                  src={userData.avatar}
-                  alt="Avatar"
-                  className="w-10 h-10 rounded-full object-cover border-2 border-zinc-800 hover:border-blue-500 transition-colors"
-                />
-              </motion.div>
+              <div className="flex items-center gap-2 border-l border-zinc-800 pl-4 ml-2">
+                <Link to={`/c/${userData.username}`}>
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    className="flex items-center gap-3 cursor-pointer"
+                  >
+                    <span className="hidden md:block font-medium text-sm text-zinc-300">
+                      {userData.username}
+                    </span>
+                    <img
+                      src={userData.avatar}
+                      alt="Avatar"
+                      className="w-10 h-10 rounded-full object-cover border-2 border-zinc-800 hover:border-blue-500 transition-colors"
+                    />
+                  </motion.div>
+                </Link>
+
+                {/* 🚨 UPDATED: This button now opens the modal instead of logging out instantly */}
+                <button
+                  onClick={() => setShowLogoutModal(true)}
+                  title="Logout"
+                  className="p-2 ml-2 bg-zinc-900 border border-zinc-800 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 text-zinc-400 rounded-full transition-all"
+                >
+                  <FiLogOut size={18} />
+                </button>
+              </div>
             </div>
           ) : (
             <div className="flex gap-3">
@@ -123,6 +155,41 @@ const Layout = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* --- 🚨 NEW: LOGOUT CONFIRMATION MODAL 🚨 --- */}
+      <AnimatePresence>
+        {showLogoutModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            >
+              <h2 className="text-xl font-bold text-white mb-2">Log Out?</h2>
+              <p className="text-zinc-400 text-sm mb-6">
+                Are you sure you want to log out of your account? You will need to sign back in to upload or like videos.
+              </p>
+              
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setShowLogoutModal(false)}
+                  className="px-4 py-2 rounded-lg font-medium text-zinc-300 hover:bg-zinc-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmLogout}
+                  className="px-4 py-2 rounded-lg font-medium bg-red-600 hover:bg-red-700 text-white transition-colors shadow-lg shadow-red-600/20"
+                >
+                  Yes, Log Out
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };
