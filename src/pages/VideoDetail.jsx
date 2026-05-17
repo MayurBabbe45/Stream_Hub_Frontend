@@ -8,6 +8,7 @@ import axiosInstance from "../utils/axiosInstance";
 import CommentSection from "../components/CommentSection";
 import SubscribeButton from "../components/SubscribeButton";
 import { useSelector } from "react-redux";
+import LikeButton from "../components/LikeButton";
 
 const VideoDetail = () => {
   const { videoId } = useParams(); // Grab the ID from the URL
@@ -80,9 +81,12 @@ const VideoDetail = () => {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-full transition-colors font-medium">
-              <FiThumbsUp /> Like
-            </button>
+            <LikeButton 
+               targetId={video._id} 
+               initialLikesCount={video.likesCount} 
+               initialIsLiked={video.isLiked} 
+               type="video" 
+            />
             <button className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-full transition-colors font-medium">
               <FiShare2 /> Share
             </button>

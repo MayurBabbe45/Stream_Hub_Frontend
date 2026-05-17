@@ -1,4 +1,5 @@
-import { Outlet, Link } from "react-router-dom";
+import { useState } from "react";
+import { Outlet, Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
   FiHome,
@@ -16,6 +17,17 @@ const Layout = () => {
   const authStatus = useSelector((state) => state.auth.status);
   const userData = useSelector((state) => state.auth.userData);
 
+  // Search functionality hooks
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col bg-[#0f0f0f] text-white overflow-hidden">
       <nav className="h-16 w-full flex items-center justify-between px-4 border-b border-zinc-800 bg-[#0f0f0f] z-50">
@@ -31,21 +43,29 @@ const Layout = () => {
           </Link>
         </div>
 
+        {/* --- UPDATED SEARCH FORM --- */}
         <div className="hidden sm:flex flex-1 max-w-xl items-center mx-4">
-          <div className="w-full flex items-center bg-[#121212] border border-zinc-700 rounded-full px-4 py-2 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
-            <FiSearch className="text-zinc-400 text-lg" />
+          <form 
+            onSubmit={handleSearch}
+            className="w-full flex items-center bg-[#121212] border border-zinc-700 rounded-full px-4 py-2 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all"
+          >
+            <button type="submit" className="text-zinc-400 hover:text-white transition-colors focus:outline-none">
+              <FiSearch className="text-lg" />
+            </button>
             <input
               type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search videos..."
               className="w-full bg-transparent outline-none px-3 text-zinc-100 placeholder-zinc-500"
             />
-          </div>
+          </form>
         </div>
 
         <div>
           {authStatus && userData ? (
             <div className="flex items-center gap-4">
-              {/* NEW UPLOAD BUTTON */}
+              {/* UPLOAD BUTTON */}
               <Link
                 to="/upload"
                 className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium rounded-full transition-colors"
