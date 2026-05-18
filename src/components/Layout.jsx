@@ -11,7 +11,8 @@ import {
   FiSearch,
   FiMenu,
   FiUploadCloud,
-  FiLogOut
+  FiLogOut,
+  FiClock // 🚨 ADDED THIS
 } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -23,7 +24,6 @@ const Layout = () => {
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
-  // 🚨 NEW: Modal state to track if the logout confirmation is open
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const handleSearch = (e) => {
@@ -33,14 +33,12 @@ const Layout = () => {
     }
   };
 
-  // 🚨 UPDATED: The actual logout logic (only runs if confirmed)
   const confirmLogout = async () => {
     try {
-      // (Optional) Add your backend API call here if you need to clear a server cookie
       // await axiosInstance.post("/users/logout"); 
       
       dispatch(logout());
-      setShowLogoutModal(false); // Close the modal
+      setShowLogoutModal(false);
       navigate("/login");
       toast.success("Logged out successfully");
     } catch (error) {
@@ -109,7 +107,6 @@ const Layout = () => {
                   </motion.div>
                 </Link>
 
-                {/* 🚨 UPDATED: This button now opens the modal instead of logging out instantly */}
                 <button
                   onClick={() => setShowLogoutModal(true)}
                   title="Logout"
@@ -141,6 +138,8 @@ const Layout = () => {
       <div className="flex flex-1 overflow-hidden">
         <aside className="hidden md:flex flex-col w-64 border-r border-zinc-800 bg-[#0f0f0f] py-4 px-3 overflow-y-auto">
           <SidebarItem icon={<FiHome />} label="Home" to="/" active />
+          {/* 🚨 ADDED HISTORY LINK HERE */}
+          <SidebarItem icon={<FiClock />} label="History" to="/history" />
           <SidebarItem icon={<FiThumbsUp />} label="Liked Videos" to="/liked" />
           <SidebarItem icon={<FiFolder />} label="Playlists" to="/playlists" />
           <div className="my-4 border-t border-zinc-800" />
@@ -156,7 +155,6 @@ const Layout = () => {
         </main>
       </div>
 
-      {/* --- 🚨 NEW: LOGOUT CONFIRMATION MODAL 🚨 --- */}
       <AnimatePresence>
         {showLogoutModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
@@ -194,7 +192,6 @@ const Layout = () => {
   );
 };
 
-// Reusable Sidebar Link Component with Hover Animations
 const SidebarItem = ({ icon, label, to, active }) => (
   <Link
     to={to}
