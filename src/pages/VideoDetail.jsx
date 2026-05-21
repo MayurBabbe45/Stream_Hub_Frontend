@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { FiThumbsUp, FiShare2 } from "react-icons/fi";
+import { FiThumbsUp, FiShare2, FiPlusSquare } from "react-icons/fi";
 import axiosInstance from "../utils/axiosInstance";
 import CommentSection from "../components/CommentSection";
 import SubscribeButton from "../components/SubscribeButton";
 import { useSelector } from "react-redux";
 import LikeButton from "../components/LikeButton";
-import { FiPlusSquare } from "react-icons/fi"; // Add this to your react-icons import
 import SaveToPlaylistModal from "../components/SaveToPlaylistModal";
+import UpNext from "../components/UpNext"; // 🚨 Imported the new component
 
 const VideoDetail = () => {
   const { videoId } = useParams(); // Grab the ID from the URL
@@ -87,7 +87,6 @@ const VideoDetail = () => {
               initialIsLiked={video.isLiked}
               type="video"
             />
-            {/* 🚨 Replace the Share button with this Save button */}
             <button
               onClick={() => setIsPlaylistModalOpen(true)}
               className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-full transition-colors font-medium"
@@ -136,19 +135,17 @@ const VideoDetail = () => {
           {video.description}
         </div>
 
-        {/* Comments Placeholder */}
+        {/* Comments Section */}
         <div className="mt-10">
           <CommentSection videoId={videoId} />
         </div>
       </div>
 
-      {/* --- RIGHT SIDE: Recommended Videos (Placeholder for now) --- */}
-      <div className="w-full xl:w-[400px] flex flex-col gap-4">
-        <h3 className="text-lg font-bold text-white mb-2">Up Next</h3>
-        <div className="p-8 text-center text-zinc-500 bg-zinc-900/50 rounded-xl border border-zinc-800 border-dashed">
-          Recommended videos feed will go here.
-        </div>
-      </div>
+      {/* --- RIGHT SIDE: Recommended Videos --- */}
+      {/* 🚨 Replaced the placeholder with the actual component! */}
+      <UpNext currentVideoId={videoId} />
+      
+      {/* Modals */}
       <SaveToPlaylistModal
         videoId={videoId}
         isOpen={isPlaylistModalOpen}

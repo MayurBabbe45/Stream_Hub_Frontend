@@ -1,19 +1,25 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { FiUserPlus, FiCheck } from "react-icons/fi";
+import { FiUserPlus, FiCheck, FiTrash2 } from "react-icons/fi"; // 🚨 Added FiTrash2
+import { motion, AnimatePresence } from "framer-motion"; // 🚨 Added for the modal
+import toast from "react-hot-toast"; // 🚨 Added for notifications
 import axiosInstance from "../utils/axiosInstance";
 import VideoCard from "../components/VideoCard";
 import SubscribeButton from "../components/SubscribeButton";
 
 const ChannelProfile = () => {
-  const { username } = useParams(); // Grab the username from the URL (/c/username)
+  const { username } = useParams();
   const [channel, setChannel] = useState(null);
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Grab the currently logged-in user to see if they are looking at their own profile
+  // 🚨 State for the Delete Video Modal
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [videoToDelete, setVideoToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const currentUser = useSelector((state) => state.auth.userData);
 
   useEffect(() => {
@@ -21,12 +27,10 @@ const ChannelProfile = () => {
       try {
         setLoading(true);
         
-        // 1. Fetch the Channel Profile details
         const profileResponse = await axiosInstance.get(`/users/c/${username}`);
         const channelData = profileResponse.data.data;
         setChannel(channelData);
 
-        // 2. Now use the channel's _id to fetch ONLY their videos
         const videosResponse = await axiosInstance.get(`/videos?userId=${channelData._id}`);
         setVideos(videosResponse.data.data.docs || videosResponse.data.data || []);
         
@@ -38,7 +42,35 @@ const ChannelProfile = () => {
     };
 
     fetchChannelData();
-  }, [username]); // Re-run if the URL username changes
+  }, [username]);
+
+  // 🚨 Function to handle opening the modal
+  const handleDeleteClick = (e, videoId) => {
+    e.preventDefault(); // Prevent accidental navigation
+    setVideoToDelete(videoId);
+    setDeleteModalOpen(true);
+  };
+
+  // 🚨 Function to actually delete the video
+  const confirmDelete = async () => {
+    try {
+      setIsDeleting(true);
+      
+      // Hit the backend delete route
+      await axiosInstance.delete(`/videos/${videoToDelete}`);
+      
+      // Optimistically remove the video from the UI
+      setVideos((prev) => prev.filter((v) => v._id !== videoToDelete));
+      
+      toast.success("Video deleted successfully");
+      setDeleteModalOpen(false);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to delete video");
+    } finally {
+      setIsDeleting(false);
+      setVideoToDelete(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -59,7 +91,7 @@ const ChannelProfile = () => {
   const isOwnProfile = currentUser?.username === channel.username;
 
   return (
-    <div className="w-full flex flex-col">
+    <div className="w-full flex flex-col relative">
       
       {/* --- 1. COVER IMAGE BANNER --- */}
       <div className="w-full h-48 md:h-64 lg:h-80 bg-zinc-800 relative">
@@ -70,7 +102,6 @@ const ChannelProfile = () => {
             className="w-full h-full object-cover"
           />
         ) : (
-          // Fallback gradient if they didn't upload a cover image
           <div className="w-full h-full bg-gradient-to-r from-blue-900 via-purple-900 to-black"></div>
         )}
       </div>
@@ -79,7 +110,6 @@ const ChannelProfile = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full -mt-12 sm:-mt-16 relative z-10">
         <div className="flex flex-col sm:flex-row items-center sm:items-end gap-6 pb-6 border-b border-zinc-800">
           
-          {/* Avatar (Overlapping the banner) */}
           <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-[#0f0f0f] overflow-hidden bg-zinc-900">
             <img 
               src={channel.avatar || "https://via.placeholder.com/150"} 
@@ -88,7 +118,6 @@ const ChannelProfile = () => {
             />
           </div>
 
-          {/* Text Details & Subscribe Button */}
           <div className="flex-1 text-center sm:text-left flex flex-col sm:flex-row justify-between items-center sm:items-center gap-4 w-full pt-2">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
@@ -103,8 +132,6 @@ const ChannelProfile = () => {
               </div>
             </div>
 
-          
-           {/* Subscribe Action Button */}
             {!isOwnProfile ? (
               <SubscribeButton 
                 channelId={channel._id} 
@@ -129,13 +156,65 @@ const ChannelProfile = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8">
               {videos.map((video) => (
-                <VideoCard key={video._id} video={video} />
+                // 🚨 Wrapped the VideoCard to allow absolute positioning of the delete button
+                <div key={video._id} className="relative group">
+                  
+                  <VideoCard video={video} />
+                  
+                  {/* 🚨 Show Delete Button ONLY if the logged-in user owns this channel */}
+                  {isOwnProfile && (
+                    <button
+                      onClick={(e) => handleDeleteClick(e, video._id)}
+                      className="absolute top-2 right-2 p-2 bg-black/80 hover:bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm z-10 shadow-lg"
+                      title="Delete Video"
+                    >
+                      <FiTrash2 size={18} />
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           )}
         </div>
         
       </div>
+
+      {/* --- 4. 🚨 CONFIRMATION MODAL --- */}
+      <AnimatePresence>
+        {deleteModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            >
+              <h2 className="text-xl font-bold text-white mb-2">Delete Video?</h2>
+              <p className="text-zinc-400 text-sm mb-6">
+                Are you sure you want to permanently delete this video? This action cannot be undone, and it will be removed from all playlists and watch histories.
+              </p>
+              
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setDeleteModalOpen(false)}
+                  disabled={isDeleting}
+                  className="px-4 py-2 rounded-lg font-medium text-zinc-300 hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={isDeleting}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-red-600 hover:bg-red-700 text-white transition-colors shadow-lg shadow-red-600/20 disabled:opacity-50"
+                >
+                  {isDeleting ? "Deleting..." : "Yes, Delete It"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };
