@@ -162,12 +162,12 @@ const ChannelProfile = () => {
               {videos.map((video) => (
                 <div key={video._id} className="relative group">
                   
-                  <VideoCard video={video} />
+                  <VideoCard video={video} showHoverStats={isOwnProfile} />
                   
                   {isOwnProfile && (
                     <button
                       onClick={(e) => handleDeleteClick(e, video._id)}
-                      className="absolute top-2 right-2 p-2 bg-black/80 hover:bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm z-10 shadow-lg"
+                      className="absolute top-2 right-2 p-2 bg-red-600 hover:bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-[0_0_15px_rgba(220,38,38,0.5)] border border-red-400 z-[60]"
                       title="Delete Video"
                     >
                       <FiTrash2 size={18} />
