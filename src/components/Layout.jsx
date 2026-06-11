@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, Link, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { logout } from "../store/authSlice"; // Adjust path if needed
+import { logout } from "../store/authSlice"; 
 import toast from "react-hot-toast";
 import {
   FiHome,
@@ -12,9 +12,13 @@ import {
   FiMenu,
   FiUploadCloud,
   FiLogOut,
-  FiClock 
+  FiClock,
+  FiBell,
+  FiBarChart2 // 🚨 ADDED: Icon for the Management Dashboard
 } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
+import { io } from "socket.io-client";
+import axiosInstance from "../utils/axiosInstance"; 
 
 const Layout = () => {
   const authStatus = useSelector((state) => state.auth.status);
@@ -22,9 +26,36 @@ const Layout = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  // Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  // THE UI BOUNCER: Check if the logged-in user is a Business
+  const isBusiness = userData?.role === "BUSINESS";
+
+  useEffect(() => {
+    // Only connect if the user is actually logged in
+    if (!userData?._id) return;
+
+    // Connect to your backend server port
+    const socket = io("http://localhost:8000", {
+      query: { userId: userData._id },
+    });
+
+    // Listen for the "notification" event
+    socket.on("notification", (data) => {
+      if (data.type === "success") {
+        toast.success(data.message, { duration: 5000, icon: "🎉" });
+      } else if (data.type === "error") {
+        toast.error(data.message, { duration: 5000, icon: "🚨" });
+      } else {
+        toast(data.message, { duration: 5000, icon: "🔔" });
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [userData]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -35,14 +66,13 @@ const Layout = () => {
 
   const confirmLogout = async () => {
     try {
-      // await axiosInstance.post("/users/logout"); 
-      
+      await axiosInstance.post("/users/logout");
       dispatch(logout());
       setShowLogoutModal(false);
-      navigate("/login");
+      navigate("/welcome");
       toast.success("Logged out successfully");
     } catch (error) {
-      toast.error("Failed to logout");
+      toast.error(error.response?.data?.message || "Failed to logout");
     }
   };
 
@@ -74,7 +104,7 @@ const Layout = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search videos..."
+              placeholder="Search corporate media..."
               className="w-full bg-transparent outline-none px-3 text-zinc-100 placeholder-zinc-500"
             />
           </form>
@@ -83,15 +113,30 @@ const Layout = () => {
         <div>
           {authStatus && userData ? (
             <div className="flex items-center gap-4">
-              <Link
-                to="/upload"
-                className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium rounded-full transition-colors"
-              >
-                <FiUploadCloud /> Upload
-              </Link>
+              
+              {/* CONDITIONALLY RENDERED UPLOAD BUTTON */}
+              {isBusiness && (
+                <Link
+                  to="/upload"
+                  className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium rounded-full transition-colors"
+                >
+                  <FiUploadCloud /> Upload
+                </Link>
+              )}
 
               <div className="flex items-center gap-2 border-l border-zinc-800 pl-4 ml-2">
-                <Link to={`/c/${userData.username}`}>
+                
+                {/* THE NOTIFICATION BELL */}
+                <Link 
+                  to="/notifications" 
+                  className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-full transition-all relative"
+                  title="Notifications"
+                >
+                  <FiBell size={20} />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+                </Link>
+
+                <Link to={isBusiness ? `/c/${userData.username}` : "/settings"}>
                   <motion.div
                     whileHover={{ scale: 1.05 }}
                     className="flex items-center gap-3 cursor-pointer"
@@ -138,16 +183,33 @@ const Layout = () => {
       <div className="flex flex-1 overflow-hidden">
         <aside className="hidden md:flex flex-col w-64 border-r border-zinc-800 bg-[#0f0f0f] py-4 px-3 overflow-y-auto">
           <SidebarItem icon={<FiHome />} label="Home" to="/" active />
-          {/* 🚨 ADDED HISTORY LINK HERE */}
+          
+          {/* Visible only to Employees */}
+          {!isBusiness && (
+            <SidebarItem icon={<FiSearch />} label="Find Organization" to="/discover" />
+          )}
+
           <SidebarItem icon={<FiClock />} label="History" to="/history" />
           <SidebarItem icon={<FiThumbsUp />} label="Liked Videos" to="/liked" />
           <SidebarItem icon={<FiFolder />} label="Playlists" to="/playlists" />
-          <div className="my-4 border-t border-zinc-800" />
-          <SidebarItem
-            icon={<FiVideo />}
-            label="My Channel"
-            to={`/c/${userData?.username || ""}`}
-          />
+          
+          {/* CONDITIONALLY RENDERED BUSINESS CONTROLS */}
+          {isBusiness && (
+            <>
+              <div className="my-4 border-t border-zinc-800" />
+              {/* 🚨 THE NEW HR ROUTE ENTRY POINT */}
+              <SidebarItem
+                icon={<FiBarChart2 />}
+                label="Manage Content"
+                to="/manage-content"
+              />
+              <SidebarItem
+                icon={<FiVideo />}
+                label="My Channel"
+                to={`/c/${userData?.username || ""}`}
+              />
+            </>
+          )}
         </aside>
 
         <main className="flex-1 overflow-y-auto bg-[#0a0a0a]">
@@ -166,7 +228,7 @@ const Layout = () => {
             >
               <h2 className="text-xl font-bold text-white mb-2">Log Out?</h2>
               <p className="text-zinc-400 text-sm mb-6">
-                Are you sure you want to log out of your account? You will need to sign back in to upload or like videos.
+                Are you sure you want to log out of your account? You will need to sign back in to access corporate media.
               </p>
               
               <div className="flex gap-3 justify-end">

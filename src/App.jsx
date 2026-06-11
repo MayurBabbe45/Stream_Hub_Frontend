@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+// 🚨 Added Navigate to the router imports
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import { Provider, useDispatch } from "react-redux";
+// 🚨 Added useSelector to read auth status
+import { Provider, useDispatch, useSelector } from "react-redux";
 import store from "./store/store";
 import { login, logout } from "./store/authSlice";
 import axiosInstance from "./utils/axiosInstance";
@@ -19,10 +21,17 @@ import Playlists from "./pages/Playlists";
 import PlaylistDetail from "./pages/PlaylistDetail";
 import LikedVideos from "./pages/LikedVideos";
 import Settings from "./pages/Settings";
+import Discovery from "./pages/Discovery";
+import Notifications from "./pages/Notifications";
+import Landing from "./pages/Landing"; // 🚨 Imported the new Landing page
+import ComplianceDashboard from "./pages/ComplianceDashboard";
+import ManageVideos from "./components/ManageVideos";
 
-// We create an inner component so we can use `useDispatch` (which requires the Redux Provider to exist)
+// We create an inner component so we can use `useDispatch` and `useSelector`
 function AppContent() {
   const dispatch = useDispatch();
+  // 🚨 Grab the current auth status from Redux
+  const authStatus = useSelector((state) => state.auth.status);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -55,7 +64,19 @@ function AppContent() {
     <>
       <Toaster position="top-center" toastOptions={{ style: { background: '#333', color: '#fff' } }} />
       <Routes>
-        <Route path="/" element={<Layout />}>
+        
+        {/* ==========================================
+            PUBLIC ROUTES (Outside the Layout) 
+        ========================================== */}
+        <Route path="/welcome" element={!authStatus ? <Landing /> : <Navigate to="/" />} />
+        <Route path="/login" element={!authStatus ? <Login /> : <Navigate to="/" />} />
+        <Route path="/register" element={!authStatus ? <Register /> : <Navigate to="/" />} />
+
+        {/* ==========================================
+            SECURE ROUTES (Inside the Layout) 
+        ========================================== */}
+        {/* 🚨 This parent route kicks anyone not logged in directly to /welcome */}
+        <Route path="/" element={authStatus ? <Layout /> : <Navigate to="/welcome" />}>
           <Route index element={<Home />} />
           <Route path="/video/:videoId" element={<VideoDetail />} />
           <Route path="/upload" element={<UploadVideo />} />
@@ -66,10 +87,12 @@ function AppContent() {
           <Route path="/playlist/:playlistId" element={<PlaylistDetail />} />
           <Route path="/liked" element={<LikedVideos />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/discover" element={<Discovery />} />
+          <Route path="/notifications" element={<Notifications />} />
+          <Route path="/manage-content" element={<ManageVideos />} />
+          <Route path="/compliance/:videoId" element={<ComplianceDashboard />} />
         </Route>
-        
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+
       </Routes>
     </>
   );

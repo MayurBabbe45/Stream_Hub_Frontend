@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
-import { FiUploadCloud, FiUser, FiMail, FiLock, FiAtSign } from "react-icons/fi";
+import { FiUploadCloud, FiUser, FiMail, FiLock, FiAtSign, FiBriefcase } from "react-icons/fi"; // 🚨 Added FiBriefcase
 import axiosInstance from "../utils/axiosInstance";
 
 const Register = () => {
@@ -14,6 +14,7 @@ const Register = () => {
     username: "",
     email: "",
     password: "",
+    role: "EMPLOYEE", // 🚨 Added role state, defaulting to Employee
   });
 
   const [files, setFiles] = useState({ avatar: null, coverImage: null });
@@ -28,8 +29,6 @@ const Register = () => {
     const name = e.target.name;
     
     if (file) {
-      // 🚨 FIX 1: Use the 'prev' state pattern to ensure we don't overwrite 
-      // the avatar when uploading the cover image!
       setFiles((prev) => ({ ...prev, [name]: file }));
       setPreviews((prev) => ({ ...prev, [name]: URL.createObjectURL(file) }));
     }
@@ -44,7 +43,7 @@ const Register = () => {
     }
 
     setLoading(true);
-    const loadingToast = toast.loading("Creating your account... Uploading media...");
+    const loadingToast = toast.loading("Provisioning your enterprise account...");
 
     try {
       const data = new FormData();
@@ -52,16 +51,14 @@ const Register = () => {
       data.append("username", formData.username.toLowerCase());
       data.append("email", formData.email);
       data.append("password", formData.password);
+      data.append("role", formData.role); // 🚨 Sending the selected role to the backend
       
-      // Append the actual files from state
       data.append("avatar", files.avatar); 
-      
       if (files.coverImage) {
         data.append("coverImage", files.coverImage);
       }
 
-      // ✅ Let Axios handle the headers and boundaries automatically
-      const response = await axiosInstance.post("/users/register", data);
+      await axiosInstance.post("/users/register", data);
 
       toast.success("Account created successfully!", { id: loadingToast });
       navigate("/login"); 
@@ -82,15 +79,54 @@ const Register = () => {
         className="max-w-xl w-full bg-[#1f1f1f] border border-zinc-800 rounded-2xl p-8 shadow-2xl"
       >
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-white tracking-tight">Join the Platform</h2>
-          <p className="text-gray-400 mt-2">Create your creator profile</p>
+          <h2 className="text-3xl font-bold text-white tracking-tight">Enterprise Access</h2>
+          <p className="text-gray-400 mt-2">Secure corporate media distribution</p>
         </div>
 
         <form onSubmit={handleRegister} className="space-y-6">
           
+          {/* 🚨 THE NEW ROLE SELECTOR 🚨 */}
+          <div className="flex flex-col gap-3">
+            <label className="text-sm text-zinc-400 font-medium">Account Type</label>
+            <div className="grid grid-cols-2 gap-4">
+              <label 
+                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                  formData.role === "EMPLOYEE" 
+                    ? "border-blue-500 bg-blue-500/10 text-blue-400" 
+                    : "border-zinc-700 bg-[#141414] text-zinc-500 hover:border-zinc-500"
+                }`}
+              >
+                <input 
+                  type="radio" name="role" value="EMPLOYEE" 
+                  className="hidden" 
+                  checked={formData.role === "EMPLOYEE"} 
+                  onChange={handleChange} 
+                />
+                <FiUser size={24} />
+                <span className="font-bold text-sm">Employee</span>
+              </label>
+              
+              <label 
+                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                  formData.role === "BUSINESS" 
+                    ? "border-purple-500 bg-purple-500/10 text-purple-400" 
+                    : "border-zinc-700 bg-[#141414] text-zinc-500 hover:border-zinc-500"
+                }`}
+              >
+                <input 
+                  type="radio" name="role" value="BUSINESS" 
+                  className="hidden" 
+                  checked={formData.role === "BUSINESS"} 
+                  onChange={handleChange} 
+                />
+                <FiBriefcase size={24} />
+                <span className="font-bold text-sm">Business</span>
+              </label>
+            </div>
+          </div>
+
           {/* --- FILE UPLOAD SECTION --- */}
           <div className="flex flex-col md:flex-row gap-6 items-center justify-center p-4 bg-[#141414] rounded-xl border border-zinc-800/50">
-            
             {/* Avatar Upload (Required) */}
             <div className="relative group cursor-pointer flex flex-col items-center">
               <input type="file" name="avatar" accept="image/*" onChange={handleFileChange} className="hidden" id="avatarUpload" />
@@ -138,12 +174,12 @@ const Register = () => {
 
           <div className="relative">
             <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-            <input type="email" name="email" value={formData.email} onChange={handleChange} required placeholder="Email Address" className="w-full pl-10 pr-4 py-3 bg-[#0f0f0f] border border-zinc-700 rounded-lg text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" />
+            <input type="email" name="email" value={formData.email} onChange={handleChange} required placeholder="Corporate Email" className="w-full pl-10 pr-4 py-3 bg-[#0f0f0f] border border-zinc-700 rounded-lg text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" />
           </div>
 
           <div className="relative">
             <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-            <input type="password" name="password" value={formData.password} onChange={handleChange} required placeholder="Password" className="w-full pl-10 pr-4 py-3 bg-[#0f0f0f] border border-zinc-700 rounded-lg text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" />
+            <input type="password" name="password" value={formData.password} onChange={handleChange} required placeholder="Secure Password" className="w-full pl-10 pr-4 py-3 bg-[#0f0f0f] border border-zinc-700 rounded-lg text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" />
           </div>
 
           <motion.button
@@ -153,14 +189,14 @@ const Register = () => {
             disabled={loading}
             className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg shadow-blue-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Creating Profile..." : "Create Account"}
+            {loading ? "Provisioning..." : "Create Account"}
           </motion.button>
         </form>
 
         <p className="text-center text-zinc-400 mt-6 text-sm">
-          Already have an account?{" "}
+          Already registered?{" "}
           <Link to="/login" className="text-blue-400 hover:text-blue-300 font-semibold transition-colors">
-            Sign In
+            Sign In Securely
           </Link>
         </p>
       </motion.div>
