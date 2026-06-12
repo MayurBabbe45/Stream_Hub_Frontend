@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { FiVideo, FiBarChart2, FiShield, FiCalendar, FiEye } from "react-icons/fi";
+import { FiVideo, FiBarChart2, FiShield, FiCalendar, FiEye, FiLink } from "react-icons/fi"; // 🚨 Added FiLink
 import { motion } from "framer-motion";
 import axiosInstance from "../utils/axiosInstance";
+import toast from "react-hot-toast"; // 🚨 Added toast
 
 const ManageVideos = () => {
   const [videos, setVideos] = useState([]);
@@ -11,7 +12,6 @@ const ManageVideos = () => {
   useEffect(() => {
     const fetchCorporateCatalog = async () => {
       try {
-        // Fetches videos uploaded by the logged-in business account
         const response = await axiosInstance.get("/videos?limit=50");
         setVideos(response.data.data || []);
       } catch (error) {
@@ -22,6 +22,20 @@ const ManageVideos = () => {
     };
     fetchCorporateCatalog();
   }, []);
+
+  // 🚨 THE INVITE GENERATOR LOGIC
+  const handleGenerateInvite = async () => {
+    try {
+      const response = await axiosInstance.post("/memberships/generate-invite");
+      const { inviteLink } = response.data.data;
+      
+      // Copy to clipboard
+      await navigator.clipboard.writeText(inviteLink);
+      toast.success("48-Hour Invite Link copied to clipboard! 📋", { duration: 4000 });
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to generate invite link");
+    }
+  };
 
   if (loading) {
     return (
@@ -34,9 +48,19 @@ const ManageVideos = () => {
   return (
     <div className="p-6 md:p-10 max-w-6xl mx-auto w-full">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Corporate Media Manager</h1>
-        <p className="text-zinc-400">Track analytics, manage visibility, and audit employee training compliance.</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Corporate Media Manager</h1>
+          <p className="text-zinc-400">Track analytics, manage visibility, and audit employee training compliance.</p>
+        </div>
+        
+        {/* 🚨 THE GENERATOR BUTTON */}
+        <button 
+          onClick={handleGenerateInvite}
+          className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-xl transition-colors shadow-[0_0_15px_rgba(147,51,234,0.3)] whitespace-nowrap"
+        >
+          <FiLink /> Generate Invite Link
+        </button>
       </div>
 
       {/* Video Inventory List */}

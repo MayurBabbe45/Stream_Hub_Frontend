@@ -1,12 +1,16 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom"; // 🚨 Added useSearchParams
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
-import { FiUploadCloud, FiUser, FiMail, FiLock, FiAtSign, FiBriefcase } from "react-icons/fi"; // 🚨 Added FiBriefcase
+import { FiUploadCloud, FiUser, FiMail, FiLock, FiAtSign, FiBriefcase, FiShield } from "react-icons/fi"; // 🚨 Added FiShield
 import axiosInstance from "../utils/axiosInstance";
 
 const Register = () => {
   const navigate = useNavigate();
+  // 🚨 Extract the invite token from the URL
+  const [searchParams] = useSearchParams();
+  const inviteToken = searchParams.get("invite");
+
   const [loading, setLoading] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -14,11 +18,18 @@ const Register = () => {
     username: "",
     email: "",
     password: "",
-    role: "EMPLOYEE", // 🚨 Added role state, defaulting to Employee
+    role: "EMPLOYEE", 
   });
 
   const [files, setFiles] = useState({ avatar: null, coverImage: null });
   const [previews, setPreviews] = useState({ avatar: null, coverImage: null });
+
+  // 🚨 If an invite token exists, strictly lock the role to EMPLOYEE
+  useEffect(() => {
+    if (inviteToken) {
+      setFormData((prev) => ({ ...prev, role: "EMPLOYEE" }));
+    }
+  }, [inviteToken]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -51,7 +62,12 @@ const Register = () => {
       data.append("username", formData.username.toLowerCase());
       data.append("email", formData.email);
       data.append("password", formData.password);
-      data.append("role", formData.role); // 🚨 Sending the selected role to the backend
+      data.append("role", formData.role); 
+      
+      // 🚨 Append the token if the user is using a magic link
+      if (inviteToken) {
+        data.append("inviteToken", inviteToken);
+      }
       
       data.append("avatar", files.avatar); 
       if (files.coverImage) {
@@ -83,51 +99,63 @@ const Register = () => {
           <p className="text-gray-400 mt-2">Secure corporate media distribution</p>
         </div>
 
-        <form onSubmit={handleRegister} className="space-y-6">
-          
-          {/* 🚨 THE NEW ROLE SELECTOR 🚨 */}
-          <div className="flex flex-col gap-3">
-            <label className="text-sm text-zinc-400 font-medium">Account Type</label>
-            <div className="grid grid-cols-2 gap-4">
-              <label 
-                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                  formData.role === "EMPLOYEE" 
-                    ? "border-blue-500 bg-blue-500/10 text-blue-400" 
-                    : "border-zinc-700 bg-[#141414] text-zinc-500 hover:border-zinc-500"
-                }`}
-              >
-                <input 
-                  type="radio" name="role" value="EMPLOYEE" 
-                  className="hidden" 
-                  checked={formData.role === "EMPLOYEE"} 
-                  onChange={handleChange} 
-                />
-                <FiUser size={24} />
-                <span className="font-bold text-sm">Employee</span>
-              </label>
-              
-              <label 
-                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                  formData.role === "BUSINESS" 
-                    ? "border-purple-500 bg-purple-500/10 text-purple-400" 
-                    : "border-zinc-700 bg-[#141414] text-zinc-500 hover:border-zinc-500"
-                }`}
-              >
-                <input 
-                  type="radio" name="role" value="BUSINESS" 
-                  className="hidden" 
-                  checked={formData.role === "BUSINESS"} 
-                  onChange={handleChange} 
-                />
-                <FiBriefcase size={24} />
-                <span className="font-bold text-sm">Business</span>
-              </label>
+        {/* 🚨 THE MAGIC LINK BANNER */}
+        {inviteToken && (
+          <div className="mb-8 p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl flex items-start gap-3 text-purple-300">
+            <FiShield className="text-2xl shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <span className="font-bold">Corporate Invite Detected. </span> 
+              You are registering via a secure access link. Your account will automatically bypass the waiting room upon creation.
             </div>
           </div>
+        )}
+
+        <form onSubmit={handleRegister} className="space-y-6">
+          
+          {/* 🚨 Hide the role selector if they are using an invite link */}
+          {!inviteToken && (
+            <div className="flex flex-col gap-3">
+              <label className="text-sm text-zinc-400 font-medium">Account Type</label>
+              <div className="grid grid-cols-2 gap-4">
+                <label 
+                  className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    formData.role === "EMPLOYEE" 
+                      ? "border-blue-500 bg-blue-500/10 text-blue-400" 
+                      : "border-zinc-700 bg-[#141414] text-zinc-500 hover:border-zinc-500"
+                  }`}
+                >
+                  <input 
+                    type="radio" name="role" value="EMPLOYEE" 
+                    className="hidden" 
+                    checked={formData.role === "EMPLOYEE"} 
+                    onChange={handleChange} 
+                  />
+                  <FiUser size={24} />
+                  <span className="font-bold text-sm">Employee</span>
+                </label>
+                
+                <label 
+                  className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    formData.role === "BUSINESS" 
+                      ? "border-purple-500 bg-purple-500/10 text-purple-400" 
+                      : "border-zinc-700 bg-[#141414] text-zinc-500 hover:border-zinc-500"
+                  }`}
+                >
+                  <input 
+                    type="radio" name="role" value="BUSINESS" 
+                    className="hidden" 
+                    checked={formData.role === "BUSINESS"} 
+                    onChange={handleChange} 
+                  />
+                  <FiBriefcase size={24} />
+                  <span className="font-bold text-sm">Business</span>
+                </label>
+              </div>
+            </div>
+          )}
 
           {/* --- FILE UPLOAD SECTION --- */}
           <div className="flex flex-col md:flex-row gap-6 items-center justify-center p-4 bg-[#141414] rounded-xl border border-zinc-800/50">
-            {/* Avatar Upload (Required) */}
             <div className="relative group cursor-pointer flex flex-col items-center">
               <input type="file" name="avatar" accept="image/*" onChange={handleFileChange} className="hidden" id="avatarUpload" />
               <label htmlFor="avatarUpload" className="cursor-pointer flex flex-col items-center gap-2">
@@ -142,7 +170,6 @@ const Register = () => {
               </label>
             </div>
 
-            {/* Cover Image Upload (Optional) */}
             <div className="relative group cursor-pointer flex flex-col items-center flex-1 w-full">
               <input type="file" name="coverImage" accept="image/*" onChange={handleFileChange} className="hidden" id="coverUpload" />
               <label htmlFor="coverUpload" className="cursor-pointer w-full flex flex-col items-center gap-2">
