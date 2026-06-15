@@ -14,7 +14,8 @@ import {
   FiLogOut,
   FiClock,
   FiBell,
-  FiBarChart2 // 🚨 ADDED: Icon for the Management Dashboard
+  FiBarChart2,
+  FiMessageSquare
 } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import { io } from "socket.io-client";
@@ -28,9 +29,34 @@ const Layout = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  
+  // 🚨 NEW: Global unread message state
+  const [totalUnread, setTotalUnread] = useState(0);
 
   // THE UI BOUNCER: Check if the logged-in user is a Business
   const isBusiness = userData?.role === "BUSINESS";
+
+  // 🚨 THE GLOBAL UNREAD FETCHER
+  useEffect(() => {
+    const fetchTotalUnread = async () => {
+      if (!userData?._id) return;
+      try {
+        const response = await axiosInstance.get("/chat/unread");
+        setTotalUnread(response.data.data.total);
+      } catch (error) {
+        // fail silently
+      }
+    };
+
+    fetchTotalUnread();
+
+    // Re-fetch whenever the chat state changes globally (triggered from Messages.jsx or Socket)
+    window.addEventListener("chatStateChanged", fetchTotalUnread);
+    
+    return () => {
+      window.removeEventListener("chatStateChanged", fetchTotalUnread);
+    };
+  }, [userData]);
 
   useEffect(() => {
     // Only connect if the user is actually logged in
@@ -50,6 +76,12 @@ const Layout = () => {
       } else {
         toast(data.message, { duration: 5000, icon: "🔔" });
       }
+    });
+
+    // 🚨 NEW: Listen for incoming chat messages globally
+    socket.on("receiveMessage", () => {
+      // Dispatch the event so the badge counter updates instantly without reloading
+      window.dispatchEvent(new Event("chatStateChanged"));
     });
 
     return () => {
@@ -189,6 +221,22 @@ const Layout = () => {
             <SidebarItem icon={<FiSearch />} label="Find Organization" to="/discover" />
           )}
 
+          {/* 🚨 THE UPGRADED CHAT ROUTE WITH DYNAMIC BADGE */}
+          <SidebarItem 
+            icon={
+              <div className="relative flex items-center justify-center">
+                <FiMessageSquare />
+                {totalUnread > 0 && (
+                  <span className="absolute -top-1.5 -right-2 w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-[#0f0f0f] shadow-sm">
+                    {totalUnread > 9 ? '9+' : totalUnread}
+                  </span>
+                )}
+              </div>
+            } 
+            label="Messages" 
+            to="/messages" 
+          />
+
           <SidebarItem icon={<FiClock />} label="History" to="/history" />
           <SidebarItem icon={<FiThumbsUp />} label="Liked Videos" to="/liked" />
           <SidebarItem icon={<FiFolder />} label="Playlists" to="/playlists" />
@@ -197,7 +245,6 @@ const Layout = () => {
           {isBusiness && (
             <>
               <div className="my-4 border-t border-zinc-800" />
-              {/* 🚨 THE NEW HR ROUTE ENTRY POINT */}
               <SidebarItem
                 icon={<FiBarChart2 />}
                 label="Manage Content"
@@ -259,7 +306,7 @@ const SidebarItem = ({ icon, label, to, active }) => (
     to={to}
     className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 ${active ? "bg-zinc-800 text-white" : "text-zinc-400 hover:bg-zinc-800 hover:text-white"}`}
   >
-    <span className="text-xl">{icon}</span>
+    <span className="text-xl flex-shrink-0">{icon}</span>
     <span className="font-medium">{label}</span>
   </Link>
 );

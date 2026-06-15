@@ -1,17 +1,36 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-// 🚨 Added FiClock to the imports
 import { FiSearch, FiBriefcase, FiLock, FiSend, FiCheckCircle, FiClock } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import axiosInstance from "../utils/axiosInstance";
 
 const Discovery = () => {
+  // 🚨 NEW STATES FOR THE HARD LOCK
+  const [membershipStatus, setMembershipStatus] = useState(null);
+  const [statusLoading, setStatusLoading] = useState(true);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [businesses, setBusinesses] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [requestedIds, setRequestedIds] = useState(new Set()); // Track which businesses we've requested
+
+  // 🚨 1. CHECK IF THEY ARE ALREADY LOCKED INTO A COMPANY
+  const fetchLockStatus = async () => {
+    try {
+      const response = await axiosInstance.get("/memberships/my-status");
+      setMembershipStatus(response.data.data); 
+    } catch (error) {
+      console.error("Failed to check membership status", error);
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLockStatus();
+  }, []);
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -33,11 +52,13 @@ const Discovery = () => {
     try {
       await axiosInstance.post(`/memberships/request/${businessId}`);
       toast.success("Access request sent successfully!");
-      
-      // Update UI to show request was sent
       setRequestedIds((prev) => new Set(prev).add(businessId));
+      
+      // 🚨 Instantly update the UI to show the Lockout Screen
+      setStatusLoading(true);
+      await fetchLockStatus();
+
     } catch (err) {
-      // If the backend throws our 400 error because a request already exists
       toast.error(err.response?.data?.message || "Failed to send request");
       if (err.response?.status === 400) {
          setRequestedIds((prev) => new Set(prev).add(businessId));
@@ -45,6 +66,61 @@ const Discovery = () => {
     }
   };
 
+  if (statusLoading) {
+    return (
+      <div className="flex items-center justify-center h-full w-full">
+        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  // ======================================================================
+  // 🚨 THE LOCKOUT SCREEN (If they already applied or joined)
+  // ======================================================================
+  if (membershipStatus) {
+    const isApproved = membershipStatus.status === "APPROVED";
+    
+    return (
+      <div className="flex flex-col items-center justify-center h-[70vh] p-6 text-center">
+        <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-2xl ${
+          isApproved ? 'bg-green-500/10 border border-green-500/20' : 'bg-yellow-500/10 border border-yellow-500/20'
+        }`}>
+          {isApproved ? (
+            <FiCheckCircle className="text-5xl text-green-500" />
+          ) : (
+            <FiClock className="text-5xl text-yellow-500" />
+          )}
+        </div>
+        
+        <h2 className="text-3xl font-bold text-white mb-3 tracking-tight">
+          {isApproved ? "Organization Locked" : "Application Pending"}
+        </h2>
+        
+        <p className="text-zinc-400 max-w-md mb-8 leading-relaxed">
+          {isApproved 
+            ? "You are securely bound to this corporate network. Cross-organization traversal is strictly prohibited by your administrator."
+            : "Your access request has been securely transmitted. You cannot apply to other organizations while a request is active."}
+        </p>
+
+        <div className="flex items-center gap-4 bg-[#141414] border border-zinc-800 p-4 rounded-2xl w-full max-w-sm justify-center shadow-lg">
+          <img 
+            src={membershipStatus.business.avatar} 
+            alt="Business" 
+            className="w-12 h-12 rounded-full border border-zinc-700 object-cover"
+          />
+          <div className="text-left overflow-hidden">
+            <div className="font-bold text-white truncate">{membershipStatus.business.fullName}</div>
+            <div className="text-xs text-zinc-500 truncate">@{membershipStatus.business.username}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
+  // ======================================================================
+  // 🔓 THE SEARCH SCREEN (If they are completely free to search)
+  // ======================================================================
   return (
     <div className="min-h-full w-full p-6 sm:p-10 flex flex-col items-center">
       

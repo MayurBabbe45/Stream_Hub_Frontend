@@ -26,6 +26,7 @@ import Notifications from "./pages/Notifications";
 import Landing from "./pages/Landing"; // 🚨 Imported the new Landing page
 import ComplianceDashboard from "./pages/ComplianceDashboard";
 import ManageVideos from "./components/ManageVideos";
+import Messages from "./pages/Messages";
 
 // We create an inner component so we can use `useDispatch` and `useSelector`
 function AppContent() {
@@ -91,6 +92,7 @@ function AppContent() {
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/manage-content" element={<ManageVideos />} />
           <Route path="/compliance/:videoId" element={<ComplianceDashboard />} />
+          <Route path="/messages" element={<Messages />} />
         </Route>
 
       </Routes>
