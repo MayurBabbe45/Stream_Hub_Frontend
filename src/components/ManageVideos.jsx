@@ -23,19 +23,7 @@ const ManageVideos = () => {
     fetchCorporateCatalog();
   }, []);
 
-  // 🚨 THE INVITE GENERATOR LOGIC
-  const handleGenerateInvite = async () => {
-    try {
-      const response = await axiosInstance.post("/memberships/generate-invite");
-      const { inviteLink } = response.data.data;
-      
-      // Copy to clipboard
-      await navigator.clipboard.writeText(inviteLink);
-      toast.success("48-Hour Invite Link copied to clipboard! 📋", { duration: 4000 });
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to generate invite link");
-    }
-  };
+
 
   if (loading) {
     return (
@@ -48,20 +36,9 @@ const ManageVideos = () => {
   return (
     <div className="p-6 md:p-10 max-w-6xl mx-auto w-full">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Corporate Media Manager</h1>
-          <p className="text-zinc-400">Track analytics, manage visibility, and audit employee training compliance.</p>
-        </div>
-        
-        {/* 🚨 THE GENERATOR BUTTON */}
-        <button 
-          onClick={handleGenerateInvite}
-          className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-xl transition-colors shadow-[0_0_15px_rgba(147,51,234,0.3)] whitespace-nowrap"
-        >
-          <FiLink /> Generate Invite Link
-        </button>
-      </div>
+      <h1 className="text-3xl font-bold text-white mb-8 flex items-center gap-3">
+        <FiVideo className="text-blue-500" /> Manage Training Media
+      </h1>
 
       {/* Video Inventory List */}
       <div className="flex flex-col gap-4">
