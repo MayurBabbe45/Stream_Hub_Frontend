@@ -9,6 +9,7 @@ const Discovery = () => {
   // 🚨 NEW STATES FOR THE HARD LOCK
   const [membershipStatus, setMembershipStatus] = useState(null);
   const [statusLoading, setStatusLoading] = useState(true);
+  const [cancelLoading, setCancelLoading] = useState(false); // 🚨 State for cancellation
 
   const [searchQuery, setSearchQuery] = useState("");
   const [businesses, setBusinesses] = useState([]);
@@ -66,6 +67,23 @@ const Discovery = () => {
     }
   };
 
+  // 🚨 2. HANDLE CANCELLING A PENDING REQUEST
+  const handleCancelRequest = async () => {
+    try {
+      setCancelLoading(true);
+      await axiosInstance.delete("/memberships/cancel-request");
+      toast.success("Request cancelled. You are free to search again.");
+      
+      // Instantly unlock the UI
+      setMembershipStatus(null);
+      setRequestedIds(new Set()); // Clear the local tracking set
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to cancel request");
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
   if (statusLoading) {
     return (
       <div className="flex items-center justify-center h-full w-full">
@@ -102,7 +120,7 @@ const Discovery = () => {
             : "Your access request has been securely transmitted. You cannot apply to other organizations while a request is active."}
         </p>
 
-        <div className="flex items-center gap-4 bg-[#141414] border border-zinc-800 p-4 rounded-2xl w-full max-w-sm justify-center shadow-lg">
+        <div className="flex items-center gap-4 bg-[#141414] border border-zinc-800 p-4 rounded-2xl w-full max-w-sm justify-center shadow-lg mb-6">
           <img 
             src={membershipStatus.business.avatar} 
             alt="Business" 
@@ -113,6 +131,17 @@ const Discovery = () => {
             <div className="text-xs text-zinc-500 truncate">@{membershipStatus.business.username}</div>
           </div>
         </div>
+
+        {/* 🚨 THE NEW CANCEL BUTTON (Only shows if NOT approved) */}
+        {!isApproved && (
+          <button
+            onClick={handleCancelRequest}
+            disabled={cancelLoading}
+            className="px-6 py-2.5 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white font-medium rounded-xl border border-red-500/20 hover:border-red-500 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {cancelLoading ? "Cancelling..." : "Cancel Request"}
+          </button>
+        )}
       </div>
     );
   }
