@@ -59,7 +59,7 @@ const Layout = () => {
   useEffect(() => {
     if (!userData?._id) return;
 
-    const socket = io("http://localhost:8000", {
+    const socket = io(import.meta.env.VITE_SOCKET_URL || "http://localhost:8000", {
       query: { userId: userData._id },
     });
 

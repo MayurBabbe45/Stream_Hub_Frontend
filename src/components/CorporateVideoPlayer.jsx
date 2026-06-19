@@ -29,10 +29,8 @@ const CorporateVideoPlayer = ({ videoId, videoUrl, poster }) => {
         // as a tab is closing. It requires formatting as a Blob for JSON.
         const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
         
-        // Note: sendBeacon doesn't automatically attach your Axios interceptor headers,
-        // so if you use Cookies for JWT auth, this works natively. If you use LocalStorage,
-        // you would need to append the token to the URL query string here.
-        navigator.sendBeacon('http://localhost:8000/api/v1/progress/sync', blob);
+        const baseApiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+        navigator.sendBeacon(`${baseApiUrl}/progress/sync`, blob);
       } else {
         // Standard sync (on pause or manual trigger)
         await axiosInstance.post("/progress/sync", payload);

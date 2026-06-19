@@ -46,7 +46,7 @@ const Messages = () => {
     initChat();
 
     if (currentUser?._id) {
-      socketRef.current = io("http://localhost:8000", {
+      socketRef.current = io(import.meta.env.VITE_SOCKET_URL || "http://localhost:8000", {
         query: { userId: currentUser._id },
       });
 
